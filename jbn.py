@@ -61,3 +61,6 @@ def build_by_token():
         print "Error! Status code %s returned for %s" % (requ.status_code, request.url)
         return "Not OK"
     return "OK"
+
+if __name__ == '__main__':
+    APP.run(host='0.0.0.0', port=8000)
