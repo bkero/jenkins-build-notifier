@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 """This is the flask app for intercepting and forwarding HTTP requests"""
 
+from __future__ import print_function
 from flask import Flask, request
 import requests
+import config
 
 # URL to your Jenkins instance (with trailing slash)
 
-JENKINS_URL = 'http://localhost:8080'
-JENKINS_BUILD_TOKEN = 'abc123'
-PHABRICATOR_IP = '127.0.0.1'
-BUILD_PATH = '/buildByToken/buildWithParameters'
 
 APP = Flask(__name__)
 
@@ -20,11 +18,11 @@ def index():
     return "Go away"
 
 
-@APP.route(BUILD_PATH)
+@APP.route(config.build_path)
 def build_by_token():
     """Connection sent HTTP URI conforming to spec"""
     # VALIDATE SOURCE IP
-    if request.remote_addr != PHABRICATOR_IP:
+    if request.remote_addr != config.phabricator_ip:
         return 'You are not phabicator. Go away.'
 
     # GET THE PARAMETERS
@@ -40,12 +38,12 @@ def build_by_token():
         return 'Bad Request'
     phid = request.args.get('PHID')
     if phid < 1:
-        print "Error: phid %s is invalid in request %s" % (phid, request.url)
+        print("Error: phid %s is invalid in request %s" % (phid, request.url))
         return 'Bad Request'
     token = request.args.get('token')
 
-    print "Forwarding request job: %s diff_id: %s phid: %s to %s" % \
-          (job, diff_id, phid, JENKINS_URL + BUILD_PATH)
+    print("Forwarding request job: %s diff_id: %s phid: %s to %s" %
+          (job, diff_id, phid, config.jenkins_url + config.build_path))
 
     # CONSTRUCT A PAYLOAD
     params = {'job': job,
@@ -54,13 +52,15 @@ def build_by_token():
               'token': token}
 
     # POST REQUEST TO JENKINS
-    requ = requests.get(JENKINS_URL + BUILD_PATH, params=params)
+    requ = requests.get(config.jenkins_url + config.build_path, params=params)
 
     # READ HTTP RETURN CODE
     if requ.status_code not in [200, 201]:
-        print "Error! Status code %s returned for %s" % (requ.status_code, request.url)
+        print("Error! Status code %s returned for %s" %
+              (requ.status_code, request.url))
         return "Not OK"
     return "OK"
 
+
 if __name__ == '__main__':
-    APP.run(host='0.0.0.0', port=8000)
+    APP.run(host=config.listen, port=config.port)
